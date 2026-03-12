@@ -1,0 +1,154 @@
+/**
+ * 设计系统变量
+ * 参考截图中的电商界面风格
+ */
+
+// ========== 颜色系统 ==========
+
+// 主色调 - 蓝色系
+$primary-color: #007AFF;
+$primary-light: #40A0FF;
+$primary-dark: #0056CC;
+$primary-gradient: linear-gradient(135deg, #007AFF 0%, #0051D5 100%);
+
+// 辅助色
+$accent-yellow: #FFC107;
+$accent-orange: #FF9800;
+$accent-green: #4CAF50;
+$accent-red: #F44336;
+
+// 中性色
+$text-primary: #333333;
+$text-secondary: #666666;
+$text-tertiary: #999999;
+$text-disabled: #CCCCCC;
+
+$bg-primary: #FFFFFF;
+$bg-secondary: #F0F0F0;
+$bg-tertiary: #F5F5F5;
+$bg-card: #FFFFFF;
+
+$border-light: #E8E8E8;
+$border-base: #DDDDDD;
+$border-dark: #CCCCCC;
+
+// 状态颜色
+$status-generating-bg: #E3F2FD;
+$status-generating-text: #2196F3;
+
+$status-queueing-bg: #FFF3E0;
+$status-queueing-text: #FF9800;
+
+$status-success-bg: #E8F5E9;
+$status-success-text: #4CAF50;
+
+$status-warning-bg: #FFF8E1;
+$status-warning-text: #FFC107;
+
+// ========== 间距系统 ==========
+
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 12px;
+$spacing-lg: 16px;
+$spacing-xl: 20px;
+$spacing-xxl: 24px;
+
+// ========== 字体系统 ==========
+
+$font-family-base: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', 'Helvetica', 'Arial', sans-serif;
+
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 14px;
+$font-size-md: 15px;
+$font-size-lg: 16px;
+$font-size-xl: 18px;
+$font-size-xxl: 20px;
+$font-size-title: 24px;
+
+$font-weight-normal: 400;
+$font-weight-medium: 500;
+$font-weight-bold: 600;
+
+// ========== 圆角系统 ==========
+
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-round: 50%;
+
+// ========== 阴影系统 ==========
+
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+$shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+$shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.12);
+$shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.15);
+
+// ========== 层级系统 ==========
+
+$z-index-dropdown: 1000;
+$z-index-sticky: 1020;
+$z-index-fixed: 1030;
+$z-index-modal-backdrop: 1040;
+$z-index-modal: 1050;
+$z-index-popover: 1060;
+$z-index-tooltip: 1070;
+
+// ========== 过渡动画 ==========
+
+$transition-base: all 0.3s ease;
+$transition-fast: all 0.15s ease;
+$transition-slow: all 0.5s ease;
+
+// ========== Mixins ==========
+
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+@mixin text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@mixin text-ellipsis-multiline($lines: 2) {
+  display: -webkit-box;
+  -webkit-line-clamp: $lines;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@mixin card-style {
+  background: $bg-card;
+  border-radius: $radius-md;
+  box-shadow: $shadow-sm;
+  transition: $transition-base;
+
+  &:active {
+    box-shadow: $shadow-md;
+    transform: scale(0.98);
+  }
+}
+
+@mixin status-badge($bg-color, $text-color) {
+  display: inline-flex;
+  align-items: center;
+  padding: $spacing-xs $spacing-sm;
+  background: $bg-color;
+  color: $text-color;
+  font-size: $font-size-xs;
+  border-radius: $radius-round;
+  font-weight: $font-weight-medium;
+}

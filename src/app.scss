@@ -1,0 +1,157 @@
+@import './styles/design-tokens.scss';
+
+// ========== 全局基础样式 ==========
+
+page {
+  font-family: $font-family-base;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: $bg-secondary;
+  color: $text-primary;
+  font-size: $font-size-base;
+  line-height: 1.5;
+}
+
+view, text {
+  box-sizing: border-box;
+}
+
+// ========== 通用容器 ==========
+
+.page-container {
+  min-height: 100vh;
+  background-color: $bg-secondary;
+  padding-bottom: constant(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.content-section {
+  padding: $spacing-lg;
+}
+
+// ========== 通用卡片 ==========
+
+.card {
+  @include card-style();
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+// ========== 通用按钮样式 ==========
+
+.btn-primary {
+  background: $primary-color;
+  color: #fff;
+  border: none;
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-lg;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+  transition: $transition-base;
+
+  &:active {
+    opacity: 0.8;
+  }
+}
+
+.btn-outline {
+  background: transparent;
+  color: $primary-color;
+  border: 1px solid $primary-color;
+  border-radius: $radius-md;
+  padding: $spacing-sm $spacing-lg;
+  font-size: $font-size-base;
+  font-weight: $font-weight-medium;
+}
+
+// ========== 状态徽章 ==========
+
+.status-badge {
+  @include status-badge($status-generating-bg, $status-generating-text);
+
+  &.generating {
+    @include status-badge($status-generating-bg, $status-generating-text);
+  }
+
+  &.queueing {
+    @include status-badge($status-queueing-bg, $status-queueing-text);
+  }
+
+  &.success {
+    @include status-badge($status-success-bg, $status-success-text);
+  }
+
+  &.warning {
+    @include status-badge($status-warning-bg, $status-warning-text);
+  }
+}
+
+// ========== 文本样式 ==========
+
+.text-primary {
+  color: $text-primary;
+}
+
+.text-secondary {
+  color: $text-secondary;
+}
+
+.text-tertiary {
+  color: $text-tertiary;
+}
+
+.text-primary-color {
+  color: $primary-color;
+}
+
+// ========== 字体大小 ==========
+
+.text-xs {
+  font-size: $font-size-xs;
+}
+
+.text-sm {
+  font-size: $font-size-sm;
+}
+
+.text-base {
+  font-size: $font-size-base;
+}
+
+.text-lg {
+  font-size: $font-size-lg;
+}
+
+.text-xl {
+  font-size: $font-size-xl;
+}
+
+// ========== 字体粗细 ==========
+
+.font-medium {
+  font-weight: $font-weight-medium;
+}
+
+.font-bold {
+  font-weight: $font-weight-bold;
+}
+
+// ========== 间距工具类 ==========
+
+.mt-xs { margin-top: $spacing-xs; }
+.mt-sm { margin-top: $spacing-sm; }
+.mt-md { margin-top: $spacing-md; }
+.mt-lg { margin-top: $spacing-lg; }
+.mt-xl { margin-top: $spacing-xl; }
+
+.mb-xs { margin-bottom: $spacing-xs; }
+.mb-sm { margin-bottom: $spacing-sm; }
+.mb-md { margin-bottom: $spacing-md; }
+.mb-lg { margin-bottom: $spacing-lg; }
+.mb-xl { margin-bottom: $spacing-xl; }
+
+.p-xs { padding: $spacing-xs; }
+.p-sm { padding: $spacing-sm; }
+.p-md { padding: $spacing-md; }
+.p-lg { padding: $spacing-lg; }
+.p-xl { padding: $spacing-xl; }
