@@ -24,7 +24,7 @@ const config = {
   compiler: {
     type: 'webpack5',
     prebundle: {
-      enable: false
+      enable: true // 启用预打包可以解决 _raf 初始化错误
     }
   },
   cache: {
