@@ -1,0 +1,30 @@
+{
+  "miniprogramRoot": "dist/",
+  "projectname": "wx-xr-app",
+  "description": "AR 扫描识别小程序",
+  "appid": "wxa7a2c10543e5750f",
+  "setting": {
+    "urlCheck": false,
+    "es6": false,
+    "enhance": false,
+    "postcss": false,
+    "minified": false,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    }
+  },
+  "compileType": "miniprogram",
+  "xr-frame": {
+    "enable": true
+  },
+  "permission": {
+    "scope.userLocation": {
+      "desc": "你的位置信息将用于AR效果展示"
+    }
+  },
+  "requiredPrivateInfos": [
+    "getLocation"
+  ]
+}
