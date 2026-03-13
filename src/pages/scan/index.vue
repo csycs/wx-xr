@@ -615,7 +615,7 @@ onUnmounted(() => {
 }
 
 .success-icon {
-  font-size: 36px;
+  font-size: 18px;
   color: #fff;
   font-weight: 300;
 }
@@ -859,7 +859,7 @@ onUnmounted(() => {
 }
 
 .no-material-icon {
-  font-size: 48px;
+  font-size: 24px;
   margin-bottom: 12px;
 }
 

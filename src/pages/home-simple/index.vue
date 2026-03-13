@@ -149,7 +149,7 @@ onMounted(() => {
 
 .title {
   display: block;
-  font-size: 22px;
+  font-size: 11px;
   font-weight: 600;
   color: #fff;
   margin-bottom: 4px;
@@ -284,7 +284,7 @@ onMounted(() => {
 }
 
 .arrow {
-  font-size: 20px;
+  font-size: 10px;
   color: #ccc;
 }
 
@@ -296,7 +296,7 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 64px;
+  font-size: 32px;
   margin-bottom: 12px;
   opacity: 0.5;
 }

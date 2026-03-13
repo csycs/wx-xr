@@ -1,8 +1,9 @@
 const config = {
   projectName: 'wx-xr-app',
   date: '2025-3-12',
-  designWidth: 750,
+  designWidth: 375,
   deviceRatio: {
+    375: 2,
     640: 2.34 / 2,
     750: 1,
     828: 1.81 / 2

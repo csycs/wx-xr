@@ -483,7 +483,7 @@ onMounted(() => {
 }
 
 .empty-icon {
-  font-size: 64px;
+  font-size: 32px;
   margin-bottom: 12px;
   opacity: 0.5;
 }
@@ -549,7 +549,7 @@ onMounted(() => {
 }
 
 .close-btn text {
-  font-size: 28px;
+  font-size: 14px;
   color: #999;
   line-height: 1;
 }
@@ -644,7 +644,7 @@ onMounted(() => {
 }
 
 .upload-icon {
-  font-size: 28px;
+  font-size: 14px;
   color: #ccc;
 }
 
