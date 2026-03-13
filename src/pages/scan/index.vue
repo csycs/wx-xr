@@ -1,140 +1,105 @@
 <template>
   <view class="scan-page">
-    <!-- AR 场景容器 -->
-    <view class="ar-container">
-      <!-- 使用 camera 组件获取摄像头画面 -->
-      <camera
-        v-if="showCamera"
-        class="camera"
-        device-position="back"
-        flash="off"
-        @ready="onCameraReady"
-        @error="onCameraError"
+    <!-- AR 场景容器 - 使用 xr-frame 实现真实识别 -->
+    <xr-frame
+      id="xr-frame"
+      class="xr-frame"
+      :width="width"
+      :height="height"
+      :ar="true"
+      @ready="onXrFrameReady"
+      @error="onXrFrameError"
+    >
+      <!-- 资源加载 -->
+      <xr-assets v-if="currentMaterial" :assets="assets" />
+
+      <!-- AR 相机 -->
+      <xr-camera id="ar-camera" :background="cameraConfig.background" />
+
+      <!-- 图像追踪器 - 自动识别图像 -->
+      <xr-tracker
+        v-if="currentMaterial"
+        id="marker-tracker"
+        :mode="'marker'"
+        :src="currentMaterial.imageUrl"
+        @markerfound="onMarkerFound"
+        @markerlost="onMarkerLost"
+        @error="onTrackerError"
       >
-        <!-- 扫描框动画 -->
-        <view class="scan-frame">
+        <!-- 视频展示 -->
+        <xr-mesh
+          v-if="currentMaterial.type === 'video'"
+          node-id="video-mesh"
+          :position="[0, 0, 0]"
+          :scale="[0.5, 0.5, 0.5]"
+          :rotation="[0, 0, 0]"
+          :geometry="'plane'"
+          :material="'video-material'"
+        />
+
+        <!-- 3D 模型展示 -->
+        <xr-mesh
+          v-if="currentMaterial.type === 'model'"
+          node-id="model-mesh"
+          :position="[0, 0, 0]"
+          :scale="[1, 1, 1]"
+          :rotation="[0, 0, 0]"
+          :geometry="'box'"
+        />
+      </xr-tracker>
+    </xr-frame>
+
+    <!-- UI 层 -->
+    <view class="ui-layer">
+      <!-- 扫描指引 -->
+      <view v-if="!isMarkerFound" class="scan-guide">
+        <view class="scan-box">
           <view class="scan-corner scan-tl"></view>
           <view class="scan-corner scan-tr"></view>
           <view class="scan-corner scan-bl"></view>
           <view class="scan-corner scan-br"></view>
           <view class="scan-line" :class="{ scanning: isScanning }"></view>
-
-          <!-- 扫描中心点 -->
           <view class="scan-center">
             <view class="scan-dot"></view>
           </view>
         </view>
-
-        <!-- AR 提示文字 -->
-        <view class="ar-hint">
-          <text class="hint-text">对准识别图片以开始 AR 体验</text>
-        </view>
-      </camera>
-
-      <!-- 视频展示层 -->
-      <view v-if="isMarkerFound && currentMaterial && currentMaterial.type === 'video'" class="video-overlay">
-        <view class="video-container">
-          <!-- 先显示一个占位图 -->
-          <image
-            v-if="!videoLoaded"
-            class="video-placeholder"
-            :src="'/' + currentMaterial.imageUrl"
-            mode="aspectFit"
-          />
-          <text v-if="!videoLoaded" class="loading-text">正在加载 AR 内容...</text>
-
-          <!-- 视频组件 -->
-          <video
-            v-show="videoLoaded"
-            id="ar-video"
-            :src="videoSrc"
-            class="ar-video"
-            loop
-            :autoplay="false"
-            controls
-            object-fit="contain"
-            playsinline
-            @play="onVideoPlay"
-            @error="onVideoError"
-            @loadstart="onVideoLoadStart"
-            @loadedmetadata="onVideoLoaded"
-            bindplay="onVideoPlay"
-            binderror="onVideoError"
-          />
-          <view class="video-label">
-            <text class="label-text">🎬 AR 视频</text>
-          </view>
-          <view class="video-debug" @tap="testVideo">
-            <text class="debug-text">测试播放</text>
-          </view>
+        <view class="scan-hint">
+          <text class="hint-text">将摄像头对准识别图片</text>
         </view>
       </view>
 
-      <!-- 3D 模型展示提示 -->
-      <view v-if="isMarkerFound && currentMaterial && currentMaterial.type === 'model'" class="model-overlay">
-        <view class="model-success-card">
-          <view class="success-icon-wrapper">
-            <text class="success-icon">✓</text>
-          </view>
-          <text class="success-title">识别成功！</text>
-          <text class="success-subtitle">3D 模型已加载</text>
-          <view class="model-info">
-            <view class="info-item">
-              <text class="info-icon">📍</text>
-              <text class="info-text">{{ currentMaterial.name }}</text>
+      <!-- 顶部状态栏 -->
+      <view class="top-bar">
+        <view class="back-btn" @tap="goBack">
+          <text class="back-text">← 返回</text>
+        </view>
+        <view class="material-info">
+          <text class="material-name">{{ !currentMaterial || "未选择素材" }}</text>
+          <view class="material-tags">
+            <view v-if="currentMaterial" class="tag tag-primary">
+              <text>{{ currentMaterial.type === "video" ? "视频" : "3D 模型" }}</text>
             </view>
-            <view class="info-item">
-              <text class="info-icon">✓</text>
-              <text class="info-text">标记已定位</text>
+            <view v-if="isMarkerFound" class="tag tag-success">
+              <text>已识别</text>
             </view>
           </view>
         </view>
       </view>
-    </view>
 
-    <!-- 顶部操作栏 -->
-    <view class="top-bar">
-      <view class="back-btn" @tap="goBack">
-        <text class="back-text">← 返回</text>
+      <!-- 状态指示器 -->
+      <view class="status-indicator" :class="{ success: isMarkerFound }">
+        <text class="status-icon">{{ isMarkerFound ? "✓" : "⟳" }}</text>
+        <text class="status-text">{{ statusText }}</text>
       </view>
-      <view class="material-info">
-        <text class="material-name">{{ currentMaterial?.name || '未选择素材' }}</text>
-        <view class="material-tags">
-          <view v-if="currentMaterial" :class="['tag', currentMaterial.type === 'model' ? 'tag-primary' : 'tag-success']">
-            <text>{{ currentMaterial.type === 'model' ? '3D 模型' : '视频' }}</text>
-          </view>
-          <view v-if="isMarkerFound" class="tag tag-success">
-            <text>已识别</text>
-          </view>
-        </view>
-      </view>
-    </view>
 
-    <!-- 状态指示器 -->
-    <view v-if="statusText" class="status-indicator" :class="{ success: isMarkerFound }">
-      <text class="status-icon">{{ isMarkerFound ? '✓' : '⟳' }}</text>
-      <text class="status-text">{{ statusText }}</text>
-    </view>
-
-    <!-- 底部识别图片预览 -->
-    <view v-if="currentMaterial" class="bottom-bar">
-      <view class="preview-card">
-        <view class="preview-image-wrapper">
-          <image
-            class="preview-image"
-            :src="currentMaterial.imageUrl"
-            mode="aspectFit"
-          />
-          <view class="preview-badge">
-            <text class="badge-icon">📷</text>
+      <!-- 底部参考图 -->
+      <view v-if="currentMaterial && !isMarkerFound" class="bottom-bar">
+        <view class="reference-card">
+          <image class="reference-image" :src="currentMaterial.imageUrl" mode="aspectFit" />
+          <view class="reference-info">
+            <text class="reference-title">识别图片</text>
+            <text class="reference-desc">对准此图片以触发 AR 内容</text>
           </view>
-        </view>
-        <view class="preview-content">
-          <text class="preview-title">目标图片</text>
-          <text class="preview-desc">将摄像头对准此图片</text>
-        </view>
-        <view class="refresh-btn" @tap="restartScan">
-          <text class="refresh-text">重新扫描</text>
         </view>
       </view>
     </view>
@@ -158,211 +123,333 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import Taro from '@tarojs/taro'
-import { useMaterialsStore } from '@/stores/materials'
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import Taro from "@tarojs/taro";
+import { useMaterialsStore } from "@/stores/materials";
 
-const materialsStore = useMaterialsStore()
+const materialsStore = useMaterialsStore();
+
+// 屏幕尺寸
+const width = ref(750);
+const height = ref(1334);
 
 // 当前扫描的素材
-const currentMaterial = ref(null)
-// 是否显示摄像头
-const showCamera = ref(true)
-// AR 是否准备就绪
-const arReady = ref(false)
+const currentMaterial = ref(null);
 // 是否找到标记
-const isMarkerFound = ref(false)
+const isMarkerFound = ref(false);
 // 是否正在扫描
-const isScanning = ref(true)
+const isScanning = ref(true);
 // 状态文本
-const statusText = ref('正在初始化...')
-// 视频是否已加载
-const videoLoaded = ref(false)
+const statusText = ref("正在初始化...");
+// xr-frame 实例
+let xrFrameInstance = null;
+// 是否已初始化
+const isInitialized = ref(false);
 
-// 计算视频路径
-const videoSrc = computed(() => {
-  if (currentMaterial.value && currentMaterial.value.videoUrl) {
-    console.log('视频路径:', currentMaterial.value.videoUrl)
-    // 微信小程序中，本地资源路径处理
-    return currentMaterial.value.videoUrl
+// 相机配置
+const cameraConfig = {
+  background: {
+    color: "#000000",
+  },
+};
+
+// 计算资源列表
+const assets = computed(() => {
+  if (!currentMaterial.value) return [];
+
+  const result = [];
+
+  // 加载识别图纹理
+  result.push({
+    type: "texture",
+    assetId: "marker-texture",
+    src: currentMaterial.value.imageUrl,
+  });
+
+  // 加载视频
+  if (currentMaterial.value.type === "video") {
+    result.push({
+      type: "video",
+      assetId: "ar-video",
+      src: currentMaterial.value.videoUrl,
+      loop: true,
+      preload: "auto",
+    });
+
+    // 创建视频材质
+    result.push({
+      type: "material",
+      assetId: "video-material",
+      shader: "unlit",
+      uniforms: {
+        u_baseColorTexture: "ar-video",
+      },
+    });
   }
-  console.log('使用默认视频路径')
-  return '/assets/videos/video-1.mp4'
-})
 
-// 视频事件处理
-const onVideoPlay = () => {
-  console.log('视频开始播放')
-}
+  // 加载 3D 模型
+  if (currentMaterial.value.type === "model" && currentMaterial.value.modelUrl) {
+    result.push({
+      type: "gltf",
+      assetId: "ar-model",
+      src: currentMaterial.value.modelUrl,
+    });
+  }
 
-const onVideoError = (e) => {
-  console.error('视频加载错误:', e)
+  return result;
+});
+
+// xr-frame 准备就绪
+const onXrFrameReady = e => {
+  console.log("[XR] ========== xr-frame 准备就绪 ==========");
+  console.log("[XR] event detail:", e);
+  console.log("[XR] event.detail:", e.detail);
+  xrFrameInstance = e.detail;
+  isInitialized.value = true;
+
+  statusText.value = "请将摄像头对准识别图片";
+  isScanning.value = true;
+
   Taro.showToast({
-    title: '视频加载失败',
-    icon: 'none',
-    duration: 2000
-  })
-}
+    title: "AR 已就绪",
+    icon: "success",
+    duration: 1500,
+  });
+};
 
-const onVideoLoadStart = () => {
-  console.log('视频开始加载')
-}
+// xr-frame 错误
+const onXrFrameError = e => {
+  console.error("[XR] ========== xr-frame 错误 ==========");
+  console.error("[XR] error detail:", e);
+  console.error("[XR] error.detail:", e.detail);
+  statusText.value = "AR 初始化失败";
 
-const onVideoLoaded = () => {
-  console.log('视频元数据加载完成')
-  videoLoaded.value = true
-}
+  Taro.showToast({
+    title: "AR 初始化失败",
+    icon: "error",
+    duration: 2000,
+  });
+};
 
-// 测试视频播放
-const testVideo = () => {
-  const videoContext = Taro.createVideoContext('ar-video')
-  videoContext.play()
-  console.log('手动触发视频播放')
-}
+// 标记识别成功
+const onMarkerFound = e => {
+  console.log("[XR] 标记识别成功:", e);
+  isMarkerFound.value = true;
+  isScanning.value = false;
+  statusText.value = "识别成功！AR 内容已加载";
 
-// 模拟识别计时器
-let recognitionTimer = null
+  Taro.showToast({
+    title: "识别成功！",
+    icon: "success",
+    duration: 1500,
+  });
 
-// 初始化 xr-frame
-const initXRFrame = () => {
+  // 播放视频
+  if (currentMaterial.value.type === "video") {
+    playVideo();
+  }
+};
+
+// 标记丢失
+const onMarkerLost = e => {
+  console.log("[XR] 标记丢失:", e);
+  isMarkerFound.value = false;
+  isScanning.value = true;
+  statusText.value = "请将摄像头对准识别图片";
+};
+
+// 追踪器错误
+const onTrackerError = e => {
+  console.error("[XR] 追踪器错误:", e);
+  statusText.value = "追踪器初始化失败";
+
+  Taro.showToast({
+    title: "追踪器初始化失败",
+    icon: "error",
+    duration: 2000,
+  });
+};
+
+// 播放视频
+const playVideo = () => {
   try {
-    console.log('初始化 AR 场景')
-    setupARScene()
+    if (!xrFrameInstance) {
+      console.warn("[XR] xr-frame 实例不存在");
+      return;
+    }
+
+    // xr-frame 会自动播放视频纹理
+    console.log("[XR] 视频播放");
   } catch (error) {
-    console.error('初始化 xr-frame 失败:', error)
+    console.error("[XR] 播放视频失败:", error);
   }
-}
-
-// 设置 AR 场景
-const setupARScene = () => {
-  console.log('设置 AR 场景')
-  startSimulationMode()
-}
-
-// 模拟识别模式（用于演示）
-const startSimulationMode = () => {
-  statusText.value = '请将摄像头对准识别图片'
-  isScanning.value = true
-
-  // 模拟 3 秒后识别成功（演示用）
-  recognitionTimer = setTimeout(() => {
-    isMarkerFound.value = true
-    isScanning.value = false
-    statusText.value = '识别成功！AR 内容已加载'
-
-    Taro.showToast({
-      title: '识别成功！',
-      icon: 'success',
-      duration: 1500
-    })
-  }, 3000)
-}
-
-// 摄像头准备就绪
-const onCameraReady = () => {
-  console.log('摄像头准备就绪')
-  statusText.value = '摄像头已启动，请对准识别图片'
-  arReady.value = true
-}
-
-// 摄像头错误
-const onCameraError = (e) => {
-  console.error('摄像头错误:', e)
-  statusText.value = '摄像头启动失败'
-  isScanning.value = false
-  Taro.showToast({
-    title: '摄像头启动失败',
-    icon: 'error'
-  })
-}
+};
 
 // 返回上一页
 const goBack = () => {
-  Taro.navigateBack()
-}
+  Taro.navigateBack();
+};
 
 // 跳转到素材管理页
 const goToMaterials = () => {
   Taro.switchTab({
-    url: '/pages/materials-simple/index'
-  })
-}
-
-// 重新开始扫描
-const restartScan = () => {
-  isMarkerFound.value = false
-  isScanning.value = true
-  statusText.value = '请将摄像头对准识别图片'
-
-  if (recognitionTimer) {
-    clearTimeout(recognitionTimer)
-  }
-
-  recognitionTimer = setTimeout(() => {
-    isMarkerFound.value = true
-    isScanning.value = false
-    statusText.value = '识别成功！AR 内容已加载'
-
-    Taro.showToast({
-      title: '识别成功！',
-      icon: 'success',
-      duration: 1500
-    })
-  }, 3000)
-}
+    url: "/pages/materials-simple/index",
+  });
+};
 
 // 初始化
 onMounted(() => {
+  console.log("[页面] onMounted 开始执行");
+
+  // 获取屏幕尺寸
+  const systemInfo = Taro.getSystemInfoSync();
+  width.value = systemInfo.windowWidth;
+  height.value = systemInfo.windowHeight;
+
+  console.log("[页面] 屏幕尺寸:", width.value, "x", height.value);
+  console.log("[页面] pixelRatio:", systemInfo.pixelRatio);
+
   // 获取当前扫描的素材
-  currentMaterial.value = materialsStore.currentScanMaterial
+  currentMaterial.value = materialsStore.currentScanMaterial;
+
+  console.log("[页面] currentMaterial:", currentMaterial.value);
 
   if (!currentMaterial.value) {
-    statusText.value = '未选择素材'
-    return
+    statusText.value = "未选择素材";
+    console.log("[页面] 未选择素材，提前返回");
+    return;
   }
 
-  console.log('当前扫描素材:', currentMaterial.value)
+  console.log("当前扫描素材:", currentMaterial.value);
+  console.log("素材类型:", currentMaterial.value.type);
+  console.log("识别图路径:", currentMaterial.value.imageUrl);
+  console.log("资源路径:", currentMaterial.value.videoUrl || currentMaterial.value.modelUrl);
 
-  // 请求摄像头权限
+  // 检查并请求摄像头权限
+  console.log("[页面] 开始检查摄像头权限");
+  checkAndRequestCameraPermission();
+});
+
+// 从设置返回后重新检查权限
+const onShow = () => {
+  if (currentMaterial.value && !isMarkerFound.value) {
+    checkAndRequestCameraPermission();
+  }
+};
+
+// 检查并请求摄像头权限
+const checkAndRequestCameraPermission = () => {
   Taro.getSetting({
     success: (res) => {
-      if (!res.authSetting['scope.camera']) {
-        Taro.authorize({
-          scope: 'scope.camera',
-          success: () => {
-            console.log('摄像头权限已获取')
-            initXRFrame()
-          },
-          fail: () => {
-            Taro.showModal({
-              title: '权限提示',
-              content: '需要使用摄像头进行 AR 扫描，请在设置中开启摄像头权限',
-              showCancel: false,
-              success: (modalRes) => {
-                if (modalRes.confirm) {
-                  Taro.openSetting()
-                }
-              }
-            })
-          }
-        })
-      } else {
-        initXRFrame()
+      const authSetting = res.authSetting;
+      console.log("权限设置:", authSetting);
+
+      // 权限未确定或已拒绝，需要请求
+      if (authSetting["scope.camera"] === undefined ||
+          authSetting["scope.camera"] === false) {
+        requestCameraPermission();
+      } else if (authSetting["scope.camera"] === true) {
+        // 已有权限
+        console.log("摄像头权限已存在");
+        statusText.value = "AR 正在初始化...";
+
+        // 检查 xr-frame 是否已初始化
+        if (isInitialized.value) {
+          console.log("[XR] xr-frame 已初始化，可以开始扫描");
+          statusText.value = "请将摄像头对准识别图片";
+        } else {
+          console.log("[XR] 等待 xr-frame 初始化...");
+        }
       }
+    },
+    fail: (err) => {
+      console.error("获取权限设置失败:", err);
+      statusText.value = "权限检查失败";
+      Taro.showToast({
+        title: "权限检查失败",
+        icon: "error",
+        duration: 2000
+      });
     }
-  })
-})
+  });
+};
+
+// 请求摄像头权限
+const requestCameraPermission = () => {
+  statusText.value = "正在请求摄像头权限...";
+
+  Taro.authorize({
+    scope: "scope.camera",
+    success: () => {
+      console.log("摄像头权限授权成功");
+      statusText.value = "AR 正在初始化...";
+
+      // 检查 xr-frame 是否已初始化
+      if (isInitialized.value) {
+        console.log("[XR] xr-frame 已初始化，可以开始扫描");
+        statusText.value = "请将摄像头对准识别图片";
+      } else {
+        console.log("[XR] 等待 xr-frame 初始化...");
+      }
+
+      Taro.showToast({
+        title: "权限获取成功",
+        icon: "success",
+        duration: 1500
+      });
+    },
+    fail: (err) => {
+      console.error("摄像头权限授权失败:", err);
+      statusText.value = "需要摄像头权限";
+
+      // 权限被拒绝，引导用户打开设置
+      Taro.showModal({
+        title: "需要摄像头权限",
+        content: "AR 扫描需要使用摄像头，请在设置中开启摄像头权限",
+        confirmText: "去设置",
+        cancelText: "取消",
+        success: (modalRes) => {
+          if (modalRes.confirm) {
+            // 打开设置页面
+            Taro.openSetting({
+              success: () => {
+                console.log("打开设置页面成功");
+              },
+              fail: (err) => {
+                console.error("打开设置页面失败:", err);
+              }
+            });
+          } else {
+            // 用户取消，返回上一页
+            Taro.showToast({
+              title: "需要摄像头权限才能使用",
+              icon: "none",
+              duration: 2000
+            });
+
+            setTimeout(() => {
+              Taro.navigateBack();
+            }, 2000);
+          }
+        }
+      });
+    }
+  });
+};
 
 onUnmounted(() => {
   // 清理当前扫描素材
-  materialsStore.setCurrentScanMaterial(null)
+  materialsStore.setCurrentScanMaterial(null);
 
-  // 清除计时器
-  if (recognitionTimer) {
-    clearTimeout(recognitionTimer)
-    recognitionTimer = null
-  }
-})
+  // 清理 xr-frame 实例
+  xrFrameInstance = null;
+});
+
+// 监听页面显示（从设置返回后重新检查权限）
+Taro.useDidShow(() => {
+  console.log('[页面显示] 检查权限状态');
+  onShow();
+});
 </script>
 
 <style lang="scss">
@@ -374,7 +461,7 @@ onUnmounted(() => {
   background-color: #000;
 }
 
-.ar-container {
+.xr-frame {
   width: 100%;
   height: 100%;
   position: absolute;
@@ -382,19 +469,29 @@ onUnmounted(() => {
   left: 0;
 }
 
-.camera {
-  width: 100%;
-  height: 100%;
+.ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 100;
 }
 
-.scan-frame {
+.scan-guide {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: 240px;
   height: 240px;
-  z-index: 10;
+}
+
+.scan-box {
+  position: relative;
+  width: 100%;
+  height: 100%;
 }
 
 .scan-corner {
@@ -407,32 +504,32 @@ onUnmounted(() => {
 }
 
 .scan-tl {
-  top: -2px;
-  left: -2px;
+  top: 0;
+  left: 0;
   border-right: none;
   border-bottom: none;
   border-radius: 6px 0 0 0;
 }
 
 .scan-tr {
-  top: -2px;
-  right: -2px;
+  top: 0;
+  right: 0;
   border-left: none;
   border-bottom: none;
   border-radius: 0 6px 0 0;
 }
 
 .scan-bl {
-  bottom: -2px;
-  left: -2px;
+  bottom: 0;
+  left: 0;
   border-right: none;
   border-top: none;
   border-radius: 0 0 0 6px;
 }
 
 .scan-br {
-  bottom: -2px;
-  right: -2px;
+  bottom: 0;
+  right: 0;
   border-left: none;
   border-top: none;
   border-radius: 0 0 6px 0;
@@ -443,7 +540,6 @@ onUnmounted(() => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 11;
 }
 
 .scan-dot {
@@ -452,6 +548,17 @@ onUnmounted(() => {
   background: #667eea;
   border-radius: 50%;
   box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(102, 126, 234, 0.1);
+  }
 }
 
 .scan-line {
@@ -461,12 +568,11 @@ onUnmounted(() => {
   right: 0;
   height: 2px;
   background: linear-gradient(to right, transparent, #667eea, #764ba2, transparent);
-  animation: scan 2s linear infinite;
   box-shadow: 0 0 10px rgba(102, 126, 234, 0.8);
 }
 
 .scan-line.scanning {
-  animation-play-state: running;
+  animation: scan 2s linear infinite;
 }
 
 @keyframes scan {
@@ -481,12 +587,12 @@ onUnmounted(() => {
   }
 }
 
-.ar-hint {
+.scan-hint {
   position: absolute;
   bottom: -36px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10;
+  text-align: center;
 }
 
 .hint-text {
@@ -496,180 +602,12 @@ onUnmounted(() => {
   white-space: nowrap;
 }
 
-.video-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 20;
-  animation: scaleIn 0.3s ease-out;
-}
-
-@keyframes scaleIn {
-  from {
-    transform: translate(-50%, -50%) scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1;
-  }
-}
-
-.video-container {
-  position: relative;
-  width: 280px;
-  height: 280px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  background: #000;
-}
-
-.ar-video {
-  width: 100%;
-  height: 100%;
-}
-
-.video-label {
-  position: absolute;
-  top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  padding: 4px 12px;
-  background: rgba(0, 0, 0, 0.6);
-  border-radius: 12px;
-}
-
-.video-placeholder {
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  top: 0;
-  left: 0;
-  background: #000;
-}
-
-.loading-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 14px;
-  color: #fff;
-  text-align: center;
-  z-index: 1;
-}
-
-.label-text {
-  font-size: 12px;
-  color: #fff;
-}
-
-.video-debug {
-  position: absolute;
-  bottom: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 6px 12px;
-  background: rgba(102, 126, 234, 0.9);
-  border-radius: 12px;
-}
-
-.debug-text {
-  font-size: 12px;
-  color: #fff;
-}
-
-.model-overlay {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 20;
-  animation: scaleIn 0.3s ease-out;
-}
-
-.model-success-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 28px 20px;
-  background: rgba(255, 255, 255, 0.98);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  min-width: 240px;
-}
-
-.success-icon-wrapper {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 14px;
-  box-shadow: 0 4px 12px rgba(82, 196, 26, 0.3);
-}
-
-.success-icon {
-  font-size: 18px;
-  color: #fff;
-  font-weight: 300;
-}
-
-.success-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #52c41a;
-  margin-bottom: 6px;
-}
-
-.success-subtitle {
-  font-size: 13px;
-  color: #666;
-  margin-bottom: 18px;
-}
-
-.model-info {
-  width: 100%;
-  padding-top: 14px;
-  border-top: 1px solid #f0f0f0;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.info-item:last-child {
-  margin-bottom: 0;
-}
-
-.info-icon {
-  font-size: 14px;
-}
-
-.info-text {
-  font-size: 13px;
-  color: #666;
-}
-
 .top-bar {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
+  pointer-events: auto;
   display: flex;
   align-items: center;
   padding: 12px 16px;
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
-  z-index: 100;
-  gap: 10px;
 }
 
 .back-btn {
@@ -723,11 +661,11 @@ onUnmounted(() => {
 }
 
 .status-indicator {
+  pointer-events: auto;
   position: absolute;
   top: 70px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 100;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -753,16 +691,16 @@ onUnmounted(() => {
 }
 
 .bottom-bar {
+  pointer-events: auto;
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
   padding: 12px 16px;
   background: linear-gradient(to top, rgba(0, 0, 0, 0.85), transparent);
-  z-index: 100;
 }
 
-.preview-card {
+.reference-card {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -772,38 +710,16 @@ onUnmounted(() => {
   backdrop-filter: blur(10px);
 }
 
-.preview-image-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-
-.preview-image {
+.reference-image {
   width: 48px;
   height: 48px;
   border-radius: 6px;
   border: 2px solid #667eea;
   box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+  flex-shrink: 0;
 }
 
-.preview-badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.badge-icon {
-  font-size: 10px;
-}
-
-.preview-content {
+.reference-info {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -811,27 +727,15 @@ onUnmounted(() => {
   min-width: 0;
 }
 
-.preview-title {
+.reference-title {
   font-size: 13px;
   font-weight: 600;
   color: #333;
 }
 
-.preview-desc {
+.reference-desc {
   font-size: 11px;
   color: #999;
-}
-
-.refresh-btn {
-  flex-shrink: 0;
-  padding: 6px 12px;
-  background: #667eea;
-  border-radius: 16px;
-}
-
-.refresh-text {
-  font-size: 12px;
-  color: #fff;
 }
 
 .no-material-overlay {
