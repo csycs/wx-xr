@@ -2,9 +2,7 @@ export default {
   pages: [
     'pages/home-simple/index',
     'pages/materials-simple/index',
-    'pages/scan/index',
-    'pages/home/index',
-    'pages/materials/index'
+    'pages/scan/index'
   ],
   window: {
     backgroundTextStyle: 'light',
